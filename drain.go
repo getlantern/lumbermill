@@ -5,14 +5,15 @@ import (
 	"bytes"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
-	"github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/bmizerany/lpx"
-	"github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/kr/logfmt"
-	metrics "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
+	"github.com/bmizerany/lpx"
+	"github.com/kr/logfmt"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 var (
@@ -59,8 +60,9 @@ func dynoType(what string) string {
 // let the scheduler do the sampling for us.
 func (s *server) maybeUpdateRecentTokens(host, id string) {
 	if atomic.CompareAndSwapInt32(s.tokenLock, 0, 1) {
+		u, e := url.Parse(host)
 		s.recentTokensLock.Lock()
-		s.recentTokens[host] = id
+		s.recentTokens[*u] = id
 		s.recentTokensLock.Unlock()
 		atomic.StoreInt32(s.tokenLock, 0)
 	}

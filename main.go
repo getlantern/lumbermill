@@ -2,9 +2,11 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -12,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	auth "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/heroku/authenticater"
-	influx "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/influxdb/influxdb-go"
-	metrics "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
-	librato "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/rcrowley/go-metrics/librato"
+	auth "github.com/heroku/authenticater"
+	influx "github.com/influxdb/influxdb/client"
+	metrics "github.com/rcrowley/go-metrics"
+	librato "github.com/rcrowley/go-metrics/librato"
 )
 
 type shutdownChan chan struct{}
@@ -39,25 +41,26 @@ func (s shutdownChan) Close() error {
 	return nil
 }
 
-func createInfluxDBClient(host string, f clientFunc) influx.ClientConfig {
-	return influx.ClientConfig{
-		Host:       host,                       //"influxor.ssl.edward.herokudev.com:8086",
-		Username:   os.Getenv("INFLUXDB_USER"), //"test",
-		Password:   os.Getenv("INFLUXDB_PWD"),  //"tester",
-		Database:   os.Getenv("INFLUXDB_NAME"), //"ingress",
-		IsSecure:   true,
-		HttpClient: f(),
+func createInfluxDBClient(u *url.URL, f clientFunc) influx.Config {
+	return influx.Config{
+		URL:      *u,                         //"influxor.ssl.edward.herokudev.com:8086",
+		Username: os.Getenv("INFLUXDB_USER"), //"test",
+		Password: os.Getenv("INFLUXDB_PWD"),  //"tester",
 	}
 }
 
 // Creates clients which deliver to InfluxDB
-func createClients(hostlist string, f clientFunc) []influx.ClientConfig {
-	var clients []influx.ClientConfig
+func createClients(hostlist string, f clientFunc) []influx.Config {
+	var clients []influx.Config
 
 	for _, host := range strings.Split(hostlist, ",") {
 		host = strings.Trim(host, "\t ")
 		if host != "" {
-			clients = append(clients, createInfluxDBClient(host, f))
+			u, err := url.Parse(fmt.Sprintf("http://%s", host))
+			if err != nil {
+				log.Fatal(err)
+			}
+			clients = append(clients, createInfluxDBClient(u, f))
 		}
 	}
 	return clients
@@ -79,7 +82,7 @@ func createMessageRoutes(hostlist string, f clientFunc) (*hashRing, []*destinati
 		go poster.Run()
 	} else {
 		for _, client := range influxClients {
-			name := client.Host
+			name := client.URL.Host
 			destination := newDestination(name, pointChannelCapacity)
 			hashRing.Add(destination)
 			destinations = append(destinations, destination)

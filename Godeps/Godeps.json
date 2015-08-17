@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/heroku/lumbermill",
+	"ImportPath": "github.com/getlantern/lumbermill",
 	"GoVersion": "go1.4.2",
 	"Deps": [
 		{
@@ -7,16 +7,67 @@
 			"Rev": "1084a7b6a16b40517826855f9bd77240d057fde2"
 		},
 		{
+			"ImportPath": "github.com/armon/go-metrics",
+			"Rev": "b2d95e5291cdbc26997d1301a5e467ecbb240e25"
+		},
+		{
 			"ImportPath": "github.com/bmizerany/lpx",
 			"Rev": "af85cf24c1567bcb5a2e4c21597cc049eab31f55"
+		},
+		{
+			"ImportPath": "github.com/boltdb/bolt",
+			"Comment": "v1.0-117-g0f053fa",
+			"Rev": "0f053fabc06119583d61937a0a06ef0ba0f1b301"
+		},
+		{
+			"ImportPath": "github.com/gogo/protobuf/proto",
+			"Rev": "cabd153b69f71bab8b89fd667a2d9bb28c92ceb4"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/go-msgpack/codec",
+			"Rev": "fa3f63826f7c23912c15263591e65d54d080b458"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/raft",
+			"Rev": "9b586e29edf1ed085b11da7772479ee45c433996"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/raft-boltdb",
+			"Rev": "d1e82c1ec3f15ee991f7cc7ffd5b67ff6f5bbaee"
 		},
 		{
 			"ImportPath": "github.com/heroku/authenticater",
 			"Rev": "16ff6099109815e5523480d377232dc6021ba3cf"
 		},
 		{
-			"ImportPath": "github.com/influxdb/influxdb-go",
-			"Rev": "23dc106e2636171db26f6a9296e8a52769726b65"
+			"ImportPath": "github.com/influxdb/influxdb/client",
+			"Comment": "v0.9.1-rc1-536-g1548f62",
+			"Rev": "1548f6289f2f0d96178f23e14bf72f6dae0eb437"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/influxql",
+			"Comment": "v0.9.1-rc1-536-g1548f62",
+			"Rev": "1548f6289f2f0d96178f23e14bf72f6dae0eb437"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/meta",
+			"Comment": "v0.9.1-rc1-536-g1548f62",
+			"Rev": "1548f6289f2f0d96178f23e14bf72f6dae0eb437"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/snapshot",
+			"Comment": "v0.9.1-rc1-536-g1548f62",
+			"Rev": "1548f6289f2f0d96178f23e14bf72f6dae0eb437"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/toml",
+			"Comment": "v0.9.1-rc1-536-g1548f62",
+			"Rev": "1548f6289f2f0d96178f23e14bf72f6dae0eb437"
+		},
+		{
+			"ImportPath": "github.com/influxdb/influxdb/tsdb",
+			"Comment": "v0.9.1-rc1-536-g1548f62",
+			"Rev": "1548f6289f2f0d96178f23e14bf72f6dae0eb437"
 		},
 		{
 			"ImportPath": "github.com/kr/logfmt",
@@ -25,6 +76,14 @@
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
 			"Rev": "3be59ceb5538550555459fb77d0efe0e218cdfc7"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/bcrypt",
+			"Rev": "173ce04bfaf66c7bb0fa9d5c0bfd93e773909dbd"
+		},
+		{
+			"ImportPath": "golang.org/x/crypto/blowfish",
+			"Rev": "173ce04bfaf66c7bb0fa9d5c0bfd93e773909dbd"
 		}
 	]
 }

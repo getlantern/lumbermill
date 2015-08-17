@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
-	auth "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/heroku/authenticater"
-	influx "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/influxdb/influxdb-go"
+	auth "github.com/heroku/authenticater"
+	influx "github.com/influxdb/influxdb/client"
 )
 
 var influxDbStaleTimeout = 24 * time.Minute // Would be nice to make this smaller, but it lags due to continuous queries.
@@ -32,7 +33,7 @@ type server struct {
 	// scheduler based sampling lock for writing to recentTokens
 	tokenLock        *int32
 	recentTokensLock *sync.RWMutex
-	recentTokens     map[string]string
+	recentTokens     map[url.URL]string
 }
 
 func newServer(httpServer *http.Server, ath auth.Authenticater, hashRing *hashRing) *server {
@@ -44,7 +45,7 @@ func newServer(httpServer *http.Server, ath auth.Authenticater, hashRing *hashRi
 		credStore:        make(map[string]string),
 		tokenLock:        new(int32),
 		recentTokensLock: new(sync.RWMutex),
-		recentTokens:     make(map[string]string),
+		recentTokens:     make(map[url.URL]string),
 	}
 
 	mux := http.NewServeMux()
@@ -106,21 +107,21 @@ func (s *server) serveHealth(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func getHealthCheckClient(host string, f clientFunc) (*influx.Client, error) {
+func getHealthCheckClient(u *url.URL, f clientFunc) (*influx.Client, error) {
 	healthCheckClientsLock.Lock()
 	defer healthCheckClientsLock.Unlock()
 
-	client, exists := healthCheckClients[host]
+	client, exists := healthCheckClients[u.Host]
 	if !exists {
 		var err error
-		clientConfig := createInfluxDBClient(host, f)
-		client, err = influx.NewClient(&clientConfig)
+		clientConfig := createInfluxDBClient(u, f)
+		client, err = influx.NewClient(clientConfig)
 		if err != nil {
-			log.Printf("err=%q at=getHealthCheckClient host=%q", err, host)
+			log.Printf("err=%q at=getHealthCheckClient host=%q", err, u.Host)
 			return nil, err
 		}
 
-		healthCheckClients[host] = client
+		healthCheckClients[u.Host] = client
 	}
 
 	return client, nil
@@ -128,14 +129,18 @@ func getHealthCheckClient(host string, f clientFunc) (*influx.Client, error) {
 
 func checkRecentToken(client *influx.Client, token, host string, errors chan error) {
 	for _, qfmt := range influxDbSeriesCheckQueries {
-		query := fmt.Sprintf(qfmt, token)
-		results, err := client.Query(query, influx.Second)
-		if err != nil || len(results) == 0 {
-			errors <- fmt.Errorf("at=influxdb-health err=%q result_length=%d host=%q query=%q", err, len(results), host, query)
+		query := influx.Query{
+			Command:  fmt.Sprintf(qfmt, token),
+			Database: "",
+		}
+		response, err := client.Query(query)
+		if err != nil || response.Error() != nil {
+			errors <- fmt.Errorf("at=influxdb-health err=%q influx-err=%s host=%q query=%q", err, response.Error(), host, query)
 			continue
 		}
 
-		t, ok := results[0].Points[0][0].(float64)
+		row := response.Results[0].Series[0]
+		t, ok := row.Values[0][0].(float64)
 		if !ok {
 			errors <- fmt.Errorf("at=influxdb-health err=\"time column was not a number\" host=%q query=%q", host, query)
 			continue
@@ -155,24 +160,24 @@ func (s *server) checkRecentTokens() []error {
 	wg := new(sync.WaitGroup)
 
 	s.recentTokensLock.RLock()
-	tokenMap := make(map[string]string)
-	for host, token := range s.recentTokens {
-		tokenMap[host] = token
+	tokenMap := make(map[url.URL]string)
+	for u, token := range s.recentTokens {
+		tokenMap[u] = token
 	}
 	s.recentTokensLock.RUnlock()
 
 	errors := make(chan error, len(tokenMap)*len(influxDbSeriesCheckQueries))
 
-	for host, token := range tokenMap {
+	for u, token := range tokenMap {
 		wg.Add(1)
-		go func(token, host string) {
-			client, err := getHealthCheckClient(host, newClientFunc)
+		go func(token string, u url.URL) {
+			client, err := getHealthCheckClient(&u, newClientFunc)
 			if err != nil {
 				return
 			}
-			checkRecentToken(client, token, host, errors)
+			checkRecentToken(client, token, u.Host, errors)
 			wg.Done()
-		}(token, host)
+		}(token, u)
 	}
 
 	wg.Wait()

@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	influx "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/influxdb/influxdb-go"
-	metrics "github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/rcrowley/go-metrics"
+	influx "github.com/influxdb/influxdb/client"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 var deliverySizeHistogram = metrics.GetOrRegisterHistogram("lumbermill.poster.deliver.sizes", metrics.DefaultRegistry, metrics.NewUniformSample(100))
@@ -21,8 +21,8 @@ type poster struct {
 	pointsFailureTime    metrics.Timer
 }
 
-func newPoster(clientConfig influx.ClientConfig, name string, destination *destination, waitGroup *sync.WaitGroup) *poster {
-	influxClient, err := influx.NewClient(&clientConfig)
+func newPoster(clientConfig influx.Config, name string, destination *destination, waitGroup *sync.WaitGroup) *poster {
+	influxClient, err := influx.NewClient(clientConfig)
 
 	if err != nil {
 		panic(err)

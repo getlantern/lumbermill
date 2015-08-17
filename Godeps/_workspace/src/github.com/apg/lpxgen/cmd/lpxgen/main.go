@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/heroku/lumbermill/Godeps/_workspace/src/github.com/apg/lpxgen"
+	"github.com/apg/lpxgen"
 	"net/http"
 	"os"
 	"strconv"
