@@ -31,6 +31,8 @@ const (
 	postersPerHost       = 6
 )
 
+var DBName string
+
 var (
 	connectionCloser = make(chan struct{})
 	debug            = os.Getenv("DEBUG") == "true"
@@ -128,6 +130,7 @@ func newClientFunc() *http.Client {
 }
 
 func main() {
+	DBName = os.Getenv("INFLUXDB_NAME")
 	hashRing, destinations, posterGroup := createMessageRoutes(os.Getenv("INFLUXDB_HOSTS"), newClientFunc)
 
 	if os.Getenv("LIBRATO_TOKEN") != "" {

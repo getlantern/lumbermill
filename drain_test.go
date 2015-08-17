@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"testing"
@@ -77,9 +76,7 @@ func TestLumbermillDrain(t *testing.T) {
 	go lumbermill.awaitShutdown()
 	go func() {
 		client := &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
+			Transport: &http.Transport{},
 		}
 
 		gen := lpxgen.NewGenerator(int(sendPointPerBatchCount),

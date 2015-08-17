@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -61,6 +62,9 @@ func dynoType(what string) string {
 func (s *server) maybeUpdateRecentTokens(host, id string) {
 	if atomic.CompareAndSwapInt32(s.tokenLock, 0, 1) {
 		u, e := url.Parse(host)
+		if e != nil {
+			panic(fmt.Errorf("unable to parse host %s", host))
+		}
 		s.recentTokensLock.Lock()
 		s.recentTokens[*u] = id
 		s.recentTokensLock.Unlock()

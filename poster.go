@@ -39,16 +39,9 @@ func newPoster(clientConfig influx.Config, name string, destination *destination
 	}
 }
 
-func makeSeries(p point) *influx.Series {
-	series := &influx.Series{Points: make([][]interface{}, 0)}
-	series.Name = p.SeriesName()
-	series.Columns = seriesColumns[p.Type]
-	return series
-}
-
 func (p *poster) Run() {
 	var last bool
-	var delivery map[string]*influx.Series
+	var delivery *influx.BatchPoints
 
 	timeout := time.NewTicker(time.Second)
 	defer func() { timeout.Stop() }()
@@ -59,19 +52,17 @@ func (p *poster) Run() {
 	}
 }
 
-func (p *poster) nextDelivery(timeout *time.Ticker) (delivery map[string]*influx.Series, last bool) {
-	delivery = make(map[string]*influx.Series)
+func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoints, last bool) {
+	delivery = &influx.BatchPoints{
+		Points:   []influx.Point{},
+		Database: DBName,
+	}
 	for {
 		select {
 		case point, open := <-p.destination.points:
 			if open {
 				seriesName := point.SeriesName()
-				series, found := delivery[seriesName]
-				if !found {
-					series = makeSeries(point)
-				}
-				series.Points = append(series.Points, point.Points)
-				delivery[seriesName] = series
+				delivery.Points = append(delivery.Points, influx.Point{Measurement: seriesName})
 			} else {
 				return delivery, true
 			}
@@ -81,21 +72,9 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery map[string]*influx
 	}
 }
 
-func (p *poster) deliver(allSeries map[string]*influx.Series) {
-	pointCount := 0
-	seriesGroup := make([]*influx.Series, 0, len(allSeries))
-
-	for _, s := range allSeries {
-		pointCount += len(s.Points)
-		seriesGroup = append(seriesGroup, s)
-	}
-
-	if pointCount == 0 {
-		return
-	}
-
+func (p *poster) deliver(bps *influx.BatchPoints) {
 	start := time.Now()
-	err := p.influxClient.WriteSeriesWithTimePrecision(seriesGroup, influx.Microsecond)
+	_, err := p.influxClient.Write(*bps)
 
 	if err != nil {
 		// TODO: Ugh. These could be timeout errors, or an internal error.
@@ -106,6 +85,6 @@ func (p *poster) deliver(allSeries map[string]*influx.Series) {
 	} else {
 		p.pointsSuccessCounter.Inc(1)
 		p.pointsSuccessTime.UpdateSince(start)
-		deliverySizeHistogram.Update(int64(pointCount))
+		deliverySizeHistogram.Update(int64(len(bps.Points)))
 	}
 }

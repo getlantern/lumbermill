@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -37,9 +36,6 @@ func newFixedStatusHandler(status int) http.HandlerFunc {
 
 func newTestClientFunc() *http.Client {
 	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
 		Timeout: defaultTestClientTimeout,
 	}
 }
@@ -53,7 +49,7 @@ func setupInfluxDBTestServer(handler http.Handler) *httptest.Server {
 		})
 		handler = mux
 	}
-	return httptest.NewTLSServer(handler)
+	return httptest.NewServer(handler)
 }
 
 func setupLumbermillTestServer(influxHosts, creds string) (*server, *httptest.Server, []*destination, *sync.WaitGroup) {

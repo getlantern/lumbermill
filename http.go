@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -57,7 +56,6 @@ func newServer(httpServer *http.Server, ath auth.Authenticater, hashRing *hashRi
 		}))
 
 	mux.HandleFunc("/health", s.serveHealth)
-	mux.HandleFunc("/health/influxdb", auth.WrapAuth(ath, s.serveInfluxDBHealth))
 	mux.HandleFunc("/target/", auth.WrapAuth(ath, s.serveTarget))
 
 	s.http.Handler = mux
@@ -125,83 +123,6 @@ func getHealthCheckClient(u *url.URL, f clientFunc) (*influx.Client, error) {
 	}
 
 	return client, nil
-}
-
-func checkRecentToken(client *influx.Client, token, host string, errors chan error) {
-	for _, qfmt := range influxDbSeriesCheckQueries {
-		query := influx.Query{
-			Command:  fmt.Sprintf(qfmt, token),
-			Database: "",
-		}
-		response, err := client.Query(query)
-		if err != nil || response.Error() != nil {
-			errors <- fmt.Errorf("at=influxdb-health err=%q influx-err=%s host=%q query=%q", err, response.Error(), host, query)
-			continue
-		}
-
-		row := response.Results[0].Series[0]
-		t, ok := row.Values[0][0].(float64)
-		if !ok {
-			errors <- fmt.Errorf("at=influxdb-health err=\"time column was not a number\" host=%q query=%q", host, query)
-			continue
-		}
-
-		ts := time.Unix(int64(t), int64(0)).UTC()
-		now := time.Now().UTC()
-		if now.Sub(ts) > influxDbStaleTimeout {
-			errors <- fmt.Errorf("at=influxdb-health err=\"stale data\" host=%q ts=%q now=%q query=%q", host, ts, now, query)
-		}
-	}
-}
-
-func (s *server) checkRecentTokens() []error {
-	var errSlice []error
-
-	wg := new(sync.WaitGroup)
-
-	s.recentTokensLock.RLock()
-	tokenMap := make(map[url.URL]string)
-	for u, token := range s.recentTokens {
-		tokenMap[u] = token
-	}
-	s.recentTokensLock.RUnlock()
-
-	errors := make(chan error, len(tokenMap)*len(influxDbSeriesCheckQueries))
-
-	for u, token := range tokenMap {
-		wg.Add(1)
-		go func(token string, u url.URL) {
-			client, err := getHealthCheckClient(&u, newClientFunc)
-			if err != nil {
-				return
-			}
-			checkRecentToken(client, token, u.Host, errors)
-			wg.Done()
-		}(token, u)
-	}
-
-	wg.Wait()
-	close(errors)
-
-	for err := range errors {
-		errSlice = append(errSlice, err)
-	}
-
-	return errSlice
-}
-
-func (s *server) serveInfluxDBHealth(w http.ResponseWriter, r *http.Request) {
-	errors := s.checkRecentTokens()
-
-	if len(errors) > 0 {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		for _, err := range errors {
-			w.Write([]byte(err.Error() + "\n"))
-			log.Println(err)
-		}
-		return
-	}
-	w.WriteHeader(http.StatusOK)
 }
 
 func (s *server) awaitShutdown() {
