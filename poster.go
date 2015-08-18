@@ -71,7 +71,7 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 				p := influx.Point{
 					Measurement: point.Type.Name(),
 					Tags: map[string]string{
-						"application": point.Token,
+						"application": "dasfdsaf", //point.Token,
 					},
 					Fields: fields,
 					Time:   time.Unix(0, t),
