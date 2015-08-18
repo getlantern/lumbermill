@@ -61,8 +61,16 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 		select {
 		case point, open := <-p.destination.points:
 			if open {
-				seriesName := point.SeriesName()
-				delivery.Points = append(delivery.Points, influx.Point{Measurement: seriesName})
+				p := influx.Point{
+					Measurement: point.Type.Name(),
+					Tags: map[string]string{
+						"application": point.Token,
+					},
+					Fields: map[string]interface{}{
+						"value": point.Points[0],
+					},
+				}
+				delivery.Points = append(delivery.Points, p)
 			} else {
 				return delivery, true
 			}
