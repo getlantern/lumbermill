@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strconv"
 	"sync"
 	"time"
 
@@ -61,14 +62,18 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 		select {
 		case point, open := <-p.destination.points:
 			if open {
+				ts := point.Points[0].(string)
+				t, _ := strconv.ParseInt(ts, 10, 64)
+
 				p := influx.Point{
 					Measurement: point.Type.Name(),
 					Tags: map[string]string{
 						"application": point.Token,
 					},
 					Fields: map[string]interface{}{
-						"value": point.Points[0],
+						"value": point.Points[1],
 					},
+					Time: time.Unix(t, 0),
 				}
 				delivery.Points = append(delivery.Points, p)
 			} else {
