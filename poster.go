@@ -61,11 +61,11 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 		select {
 		case point, open := <-p.destination.points:
 			if open {
-				t := point.Points[0].(int64)
+				t := point.Points[0].(int64) * int64(time.Microsecond)
 				fields := make(map[string]interface{})
+				columnNames := point.Type.Columns()
 				for i := 1; i < len(point.Points); i++ {
-					name := seriesColumns[point.Type][i]
-					fields[name] = point.Points[i]
+					fields[columnNames[i]] = point.Points[i]
 				}
 
 				p := influx.Point{
@@ -74,7 +74,7 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 						"application": point.Token,
 					},
 					Fields: fields,
-					Time:   time.Unix(t, 0),
+					Time:   time.Unix(0, t),
 				}
 				delivery.Points = append(delivery.Points, p)
 			} else {
