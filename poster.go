@@ -54,8 +54,9 @@ func (p *poster) Run() {
 
 func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoints, last bool) {
 	delivery = &influx.BatchPoints{
-		Points:   []influx.Point{},
-		Database: DBName,
+		Points:          []influx.Point{},
+		Database:        DBName,
+		RetentionPolicy: "default",
 	}
 	for {
 		select {
@@ -71,7 +72,7 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 				p := influx.Point{
 					Measurement: point.Type.Name(),
 					Tags: map[string]string{
-						"application": "dasfdsaf", //point.Token,
+						"application": point.Token,
 					},
 					Fields: fields,
 					Time:   time.Unix(0, t),
