@@ -34,4 +34,4 @@ You'll then start getting metrics in your influxdb host!
 * `LIBRATO_TOKEN`: Librato token for posting metrics to
 * `LIBRATO_OWNER`: User that owns said token
 * `LIBRATO_SOURCE`: Source for Librato metrics.
-* `PORT`: 
+* `APP_TOKENS`: `app1:token1|app2:token2|appN:tokenN`, to map drain token with human readable app name.
