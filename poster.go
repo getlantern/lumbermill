@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 
 var deliverySizeHistogram = metrics.GetOrRegisterHistogram("lumbermill.poster.deliver.sizes", metrics.DefaultRegistry, metrics.NewUniformSample(100))
 
+var tokenAppMap = make(map[string]string)
+
 type poster struct {
 	destination          *destination
 	name                 string
@@ -19,6 +23,20 @@ type poster struct {
 	pointsSuccessTime    metrics.Timer
 	pointsFailureCounter metrics.Counter
 	pointsFailureTime    metrics.Timer
+}
+
+func init() {
+	s := os.Getenv("APP_TOKENS")
+	if s == "" {
+		log.Fatal("No environment variable APP_TOKENS")
+	}
+	pairs := strings.Split(s, "|")
+	for _, p := range pairs {
+		pair := strings.Split(strings.Trim(p, " "), ":")
+		app, token := strings.Trim(pair[0], " "), strings.Trim(pair[1], " ")
+		tokenAppMap[token] = app
+	}
+
 }
 
 func newPoster(clientConfig influx.Config, name string, destination *destination, waitGroup *sync.WaitGroup) *poster {
@@ -61,26 +79,29 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 	for {
 		select {
 		case point, open := <-p.destination.points:
-			if open {
-				t := point.Points[0].(int64) * int64(time.Microsecond)
-				fields := make(map[string]interface{})
-				columnNames := point.Type.Columns()
-				for i := 1; i < len(point.Points); i++ {
-					fields[columnNames[i]] = point.Points[i]
-				}
-
-				p := influx.Point{
-					Measurement: point.Type.Name(),
-					Tags: map[string]string{
-						"application": point.Token,
-					},
-					Fields: fields,
-					Time:   time.Unix(0, t),
-				}
-				delivery.Points = append(delivery.Points, p)
-			} else {
+			if !open {
 				return delivery, true
 			}
+			app, in := tokenAppMap[point.Token]
+			if !in {
+				log.Printf("Token %s has no associated application\n", point.Token)
+			}
+			t := point.Points[0].(int64) * int64(time.Microsecond)
+			fields := make(map[string]interface{})
+			columnNames := point.Type.Columns()
+			for i := 1; i < len(point.Points); i++ {
+				fields[columnNames[i]] = point.Points[i]
+			}
+
+			p := influx.Point{
+				Measurement: point.Type.Name(),
+				Tags: map[string]string{
+					"app": app,
+				},
+				Fields: fields,
+				Time:   time.Unix(0, t),
+			}
+			delivery.Points = append(delivery.Points, p)
 		case <-timeout.C:
 			return delivery, false
 		}
