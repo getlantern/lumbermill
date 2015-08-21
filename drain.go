@@ -132,8 +132,6 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			timestamp := t.UnixNano() / int64(time.Microsecond)
-
 			pid := string(header.Procid)
 			switch pid {
 			case "router":
@@ -156,7 +154,7 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 						log.Printf("debug=error.%s %s", re.Code, msg)
 					}
 
-					destination.PostPoint(point{id, routerEvent, []interface{}{timestamp, re.Code}})
+					destination.PostPoint(point{id, routerEvent, []string{re.Code}, []interface{}{1}, t})
 
 					// If the app is blank (not pushed) we don't care
 				// do nothing atm, increment a counter
@@ -173,7 +171,7 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 						continue
 					}
 
-					destination.PostPoint(point{id, routerRequest, []interface{}{timestamp, rm.Status, rm.Service}})
+					destination.PostPoint(point{id, routerRequest, []string{string(rm.Status)}, []interface{}{rm.Service}, t})
 				}
 
 				// Non router logs, so either dynos, runtime, etc
@@ -190,8 +188,7 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 
 					what := string(lp.Header().Procid)
 					destination.PostPoint(
-						point{id, dynoEvents, []interface{}{timestamp, what, "R", de.Code, string(msg), dynoType(what)}},
-					)
+						point{id, dynoEvents, []string{what, "R", string(de.Code), string(msg), dynoType(what)}, []interface{}{1}, t})
 
 				// Dyno log-runtime-metrics memory messages
 				case bytes.Contains(msg, dynoMemMsgSentinel):
@@ -209,17 +206,19 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 							point{
 								id,
 								dynoMem,
-								[]interface{}{
-									timestamp,
+								[]string{
 									dm.Source,
+									dynoType(dm.Source),
+								},
+								[]interface{}{
 									dm.MemoryCache,
 									dm.MemoryPgpgin,
 									dm.MemoryPgpgout,
 									dm.MemoryRSS,
 									dm.MemorySwap,
 									dm.MemoryTotal,
-									dynoType(dm.Source),
 								},
+								t,
 							},
 						)
 					}
@@ -240,7 +239,9 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 							point{
 								id,
 								dynoLoad,
-								[]interface{}{timestamp, dm.Source, dm.LoadAvg1Min, dm.LoadAvg5Min, dm.LoadAvg15Min, dynoType(dm.Source)},
+								[]string{dm.Source, dynoType(dm.Source)},
+								[]interface{}{dm.LoadAvg1Min, dm.LoadAvg5Min, dm.LoadAvg15Min},
+								t,
 							},
 						)
 					}

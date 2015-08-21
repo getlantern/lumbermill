@@ -86,20 +86,24 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 			if !in {
 				log.Printf("Token %s has no associated application\n", point.Token)
 			}
-			t := point.Points[0].(int64) * int64(time.Microsecond)
 			fields := make(map[string]interface{})
-			columnNames := point.Type.Columns()
-			for i := 1; i < len(point.Points); i++ {
-				fields[columnNames[i]] = point.Points[i]
+			tags := make(map[string]string)
+			tagNames := point.Type.TagColumns()
+			fieldNames := point.Type.fieldColumns()
+			for i := 1; i < len(point.Tags); i++ {
+				tags[tagNames[i]] = point.Tags[i]
+			}
+			tags["app"] = app
+
+			for i := 1; i < len(point.Fields); i++ {
+				fields[fieldNames[i]] = point.Fields[i]
 			}
 
 			p := influx.Point{
 				Measurement: point.Type.Name(),
-				Tags: map[string]string{
-					"app": app,
-				},
-				Fields: fields,
-				Time:   time.Unix(0, t),
+				Tags:        tags,
+				Fields:      fields,
+				Time:        point.Time,
 			}
 			delivery.Points = append(delivery.Points, p)
 		case <-timeout.C:

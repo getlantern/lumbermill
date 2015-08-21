@@ -9,6 +9,7 @@ This is a Go app which takes Heroku Log drains and parses the router and dyno in
 ### Setup Influx
 
 Create a db, user and password, and write the details + hostname and port down.
+Influx 0.9.3 is the minimum supported version.
 
 ### Deploy to Heroku
 
