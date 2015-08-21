@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -171,7 +172,7 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 						continue
 					}
 
-					destination.PostPoint(point{id, routerRequest, []string{string(rm.Status)}, []interface{}{rm.Service}, t})
+					destination.PostPoint(point{id, routerRequest, []string{strconv.Itoa(rm.Status)}, []interface{}{rm.Service}, t})
 				}
 
 				// Non router logs, so either dynos, runtime, etc
@@ -188,7 +189,7 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 
 					what := string(lp.Header().Procid)
 					destination.PostPoint(
-						point{id, dynoEvents, []string{what, "R", string(de.Code), string(msg), dynoType(what)}, []interface{}{1}, t})
+						point{id, dynoEvents, []string{what, "R", strconv.Itoa(de.Code), string(msg), dynoType(what)}, []interface{}{1}, t})
 
 				// Dyno log-runtime-metrics memory messages
 				case bytes.Contains(msg, dynoMemMsgSentinel):

@@ -86,16 +86,17 @@ func (p *poster) nextDelivery(timeout *time.Ticker) (delivery *influx.BatchPoint
 			if !in {
 				log.Printf("Token %s has no associated application\n", point.Token)
 			}
-			fields := make(map[string]interface{})
+
 			tags := make(map[string]string)
 			tagNames := point.Type.TagColumns()
-			fieldNames := point.Type.fieldColumns()
-			for i := 1; i < len(point.Tags); i++ {
+			tags["app"] = app
+			for i := 0; i < len(point.Tags); i++ {
 				tags[tagNames[i]] = point.Tags[i]
 			}
-			tags["app"] = app
 
-			for i := 1; i < len(point.Fields); i++ {
+			fields := make(map[string]interface{})
+			fieldNames := point.Type.FieldColumns()
+			for i := 0; i < len(point.Fields); i++ {
 				fields[fieldNames[i]] = point.Fields[i]
 			}
 

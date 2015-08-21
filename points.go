@@ -42,7 +42,7 @@ func (st seriesType) TagColumns() []string {
 	return tagColumns[st]
 }
 
-func (st seriesType) fieldColumns() []string {
+func (st seriesType) FieldColumns() []string {
 	return fieldColumns[st]
 }
 
