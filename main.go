@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -121,8 +122,10 @@ func awaitShutdown(shutdownChan shutdownChan, server *server, posterGroup *sync.
 
 func newClientFunc() *http.Client {
 	return &http.Client{
-		Transport: &http.Transport{},
-		Timeout:   defaultClientTimeout,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: os.Getenv("INFLUXDB_SKIP_VERIFY") == "true"},
+		},
+		Timeout: defaultClientTimeout,
 	}
 }
 
