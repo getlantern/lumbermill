@@ -58,7 +58,7 @@ func createClients(hostlist string, f clientFunc) []influx.Config {
 	for _, host := range strings.Split(hostlist, ",") {
 		host = strings.Trim(host, "\t ")
 		if host != "" {
-			u, err := url.Parse(fmt.Sprintf("http://%s", host))
+			u, err := url.Parse(fmt.Sprintf("https://%s", host))
 			if err != nil {
 				log.Fatal(err)
 			}
