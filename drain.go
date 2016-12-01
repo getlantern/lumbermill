@@ -125,7 +125,7 @@ func (s *server) serveDrain(w http.ResponseWriter, r *http.Request) {
 			timeStr := string(lp.Header().Time)
 			t, e := time.Parse("2006-01-02T15:04:05.000000+00:00", timeStr)
 			if e != nil {
-				t, e = time.Parse("2006-01-02T15:04:05+00:00", timeStr)
+				t, e = time.Parse("2006-01-02T15:04:05Z", timeStr)
 				if e != nil {
 					timeParsingErrorCounter.Inc(1)
 					log.Printf("Error Parsing Time(%s): %q\n", string(lp.Header().Time), e)
