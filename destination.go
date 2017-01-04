@@ -45,5 +45,6 @@ func (d *destination) PostPoint(point point) {
 
 func (d *destination) Close() error {
 	close(d.points)
-	return nil
+	d.points = nil	
+return nil
 }
